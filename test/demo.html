@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsForge 认证演示 - JWT Token 生成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fa fa-database"></i> InsForge 云端数据库 + JWT 认证演示
+            </h1>
+            <p class="text-gray-600 mt-2">数据库已部署到云端：https://2t46q3eu.us-west.insforge.app</p>
+        </header>
+
+        <!-- 说明区域 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fa fa-info-circle"></i> 系统说明
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-bold text-gray-700 mb-2">✅ 已部署的数据库表</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">profiles</code> - 用户扩展信息表</li>
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">user_data</code> - 用户数据表</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-700 mb-2">🔐 行级安全策略 (RLS)</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>用户只能查看自己的数据</li>
+                        <li>用户只能插入/更新/删除自己的数据</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- JWT Token 生成 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fa fa-key"></i> JWT Token 生成
+            </h2>
+            <p class="text-gray-600 mb-4">生成一个模拟的 JWT Token 用于演示（在实际生产中应通过 InsForge OAuth 获取真实 Token）</p>
+            <button
+                onclick="generateMockToken()"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+            >
+                <i class="fa fa-magic"></i> 生成模拟 JWT Token
+            </button>
+        </div>
+
+        <!-- 数据管理区域 -->
+        <div id="data-section" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fa fa-database"></i> 数据管理
+            </h2>
+
+            <!-- 当前用户信息 -->
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="font-semibold text-gray-700 mb-2">当前模拟用户</h3>
+                <div id="user-info" class="text-sm text-gray-600"></div>
+            </div>
+
+            <!-- 提交数据表单 -->
+            <form onsubmit="submitData(event)" class="mb-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">添加新数据</h3>
+                <div class="grid md:grid-cols-2 gap-4 mb-3">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">标题</label>
+                        <input
+                            id="data-title"
+                            type="text"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            placeholder="输入标题"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">内容</label>
+                        <textarea
+                            id="data-content"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            rows="2"
+                            placeholder="输入内容"
+                        ></textarea>
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                >
+                    <i class="fa fa-plus"></i> 提交到云端数据库
+                </button>
+            </form>
+
+            <button
+                onclick="loadData()"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200 mb-4"
+            >
+                <i class="fa fa-refresh"></i> 刷新数据
+            </button>
+
+            <div>
+                <h3 class="text-lg font-medium mb-3 text-gray-700">我的云端数据</h3>
+                <div id="data-list" class="grid md:grid-cols-2 gap-4">
+                    <p class="text-gray-500 text-sm col-span-2">暂无数据</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- API 调用日志 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fa fa-terminal"></i> API 调用日志
+            </h2>
+            <div id="api-log" class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs font-mono overflow-y-auto max-h-96">
+                <p class="text-gray-500">// 等待操作...</p>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message" class="fixed top-4 right-4 max-w-sm hidden"></div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            baseUrl: 'https://2t46q3eu.us-west.insforge.app',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4ODU0MTZ9.MmTpyJQoCsiILWhNRYEMMeVQG9btPKS6bbfDwB1u_1g'
+        };
+
+        let mockUser = null;
+        let mockToken = null;
+
+        // 日志函数
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('api-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                error: 'text-red-400',
+                request: 'text-yellow-400',
+                response: 'text-cyan-400'
+            };
+            logDiv.innerHTML += `<p class="${colors[type]}">[${timestamp}] ${message}</p>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // 生成模拟 JWT Token
+        function generateMockToken() {
+            log('开始生成模拟 JWT Token...', 'info');
+
+            // 生成模拟用户 ID
+            const userId = 'user-' + Math.random().toString(36).substr(2, 9);
+            const email = `user${Math.floor(Math.random() * 1000)}@example.com`;
+
+            mockUser = {
+                id: userId,
+                email: email,
+                role: 'authenticated'
+            };
+
+            // 生成模拟 JWT payload
+            const payload = {
+                sub: userId,
+                email: email,
+                role: 'authenticated',
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24小时过期
+            };
+
+            // 生成简单的 JWT（仅用于演示）
+            const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const body = btoa(JSON.stringify(payload));
+            const signature = 'mock-signature-' + Math.random().toString(36).substr(2);
+            mockToken = `${header}.${body}.${signature}`;
+
+            log(`✅ 模拟用户已创建: ${email}`, 'success');
+            log(`✅ 模拟 Token 已生成 (前50字符): ${mockToken.substring(0, 50)}...`, 'success');
+
+            // 显示用户信息
+            document.getElementById('user-info').innerHTML = `
+                <p><strong>用户 ID:</strong> ${userId}</p>
+                <p><strong>邮箱:</strong> ${email}</p>
+                <p><strong>角色:</strong> authenticated</p>
+                <p class="mt-2 text-xs text-gray-500"><strong>注意:</strong> 这是模拟 Token，实际生产中应通过 InsForge OAuth 获取真实 Token</p>
+            `;
+
+            document.getElementById('data-section').classList.remove('hidden');
+            showMessage('模拟 Token 生成成功！', 'success');
+
+            // 自动加载数据
+            loadData();
+        }
+
+        // 提交数据
+        async function submitData(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('data-title').value;
+            const content = document.getElementById('data-content').value;
+
+            log(`📤 准备提交数据到云端...`, 'request');
+            log(`POST ${CONFIG.baseUrl}/rest/v1/user_data`, 'request');
+            log(`Body: [{"user_id":"${mockUser.id}","title":"${title}","content":"${content}"}]`, 'request');
+
+            try {
+                const response = await fetch(`${CONFIG.baseUrl}/rest/v1/user_data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': CONFIG.anonKey,
+                        'Authorization': `Bearer ${mockToken}`,
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify([{
+                        user_id: mockUser.id,
+                        title,
+                        content
+                    }])
+                });
+
+                log(`📥 响应状态: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || '提交失败');
+                }
+
+                const data = await response.json();
+                log(`✅ 数据提交成功! ID: ${data[0].id}`, 'success');
+
+                document.getElementById('data-title').value = '';
+                document.getElementById('data-content').value = '';
+
+                showMessage('数据提交成功！', 'success');
+                loadData();
+            } catch (error) {
+                log(`❌ 错误: ${error.message}`, 'error');
+                showMessage(error.message, 'error');
+            }
+        }
+
+        // 加载数据
+        async function loadData() {
+            log(`📥 准备从云端加载数据...`, 'request');
+            log(`GET ${CONFIG.baseUrl}/rest/v1/user_data?user_id=eq.${mockUser.id}`, 'request');
+
+            try {
+                const response = await fetch(
+                    `${CONFIG.baseUrl}/rest/v1/user_data?user_id=eq.${mockUser.id}&order=created_at.desc`,
+                    {
+                        headers: {
+                            'apikey': CONFIG.anonKey,
+                            'Authorization': `Bearer ${mockToken}`
+                        }
+                    }
+                );
+
+                log(`📥 响应状态: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (!response.ok) {
+                    throw new Error('加载失败');
+                }
+
+                const data = await response.json();
+                log(`✅ 成功加载 ${data.length} 条数据`, 'success');
+
+                const list = document.getElementById('data-list');
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm col-span-2">暂无数据</p>';
+                } else {
+                    list.innerHTML = data.map(item => `
+                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <h4 class="font-semibold text-gray-800">${escapeHtml(item.title)}</h4>
+                            <p class="text-sm text-gray-600 mt-2">${escapeHtml(item.content)}</p>
+                            <p class="text-xs text-gray-400 mt-2">
+                                <i class="fa fa-clock-o"></i> ${new Date(item.created_at).toLocaleString('zh-CN')}
+                            </p>
+                            <p class="text-xs text-gray-400">
+                                <i class="fa fa-database"></i> ID: ${item.id}
+                            </p>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                log(`❌ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 显示消息
+        function showMessage(text, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+
+            const msg = document.getElementById('message');
+            msg.className = `fixed top-4 right-4 max-w-sm ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg`;
+            msg.textContent = text;
+            msg.classList.remove('hidden');
+
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+        }
+
+        // 初始化
+        log('🚀 InsForge 认证演示已启动', 'info');
+        log(`📍 后端地址: ${CONFIG.baseUrl}`, 'info');
+        log(`🔑 Anon Key: ${CONFIG.anonKey.substring(0, 20)}...`, 'info');
+    </script>
+</body>
+</html>

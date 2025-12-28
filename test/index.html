@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户认证系统 - InsForge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 text-center">
+                <i class="fa fa-user-circle-o"></i> 用户认证系统
+            </h1>
+            <p class="text-gray-600 text-center mt-2">基于 InsForge 后端 - 托管认证页面</p>
+        </header>
+
+        <!-- 认证按钮区域 -->
+        <div id="auth-section" class="max-w-md mx-auto">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 text-center">
+                    <i class="fa fa-lock"></i> 欢迎使用
+                </h2>
+                <p class="text-gray-600 text-center mb-6">
+                    请登录或注册以管理您的数据
+                </p>
+                <div class="space-y-3">
+                    <button
+                        onclick="handleLogin()"
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
+                    >
+                        <i class="fa fa-sign-in"></i> 登录 / 注册
+                    </button>
+                </div>
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-gray-500">支持邮箱和社交账号登录</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户信息区域 -->
+        <div id="user-section" class="max-w-2xl mx-auto hidden">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fa fa-user"></i> 用户信息
+                </h2>
+                <div id="user-info" class="space-y-2">
+                    <!-- 用户信息将在这里显示 -->
+                </div>
+                <button
+                    onclick="handleLogout()"
+                    class="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                >
+                    <i class="fa fa-sign-out"></i> 退出登录
+                </button>
+            </div>
+
+            <!-- JWT 令牌信息 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fa fa-key"></i> JWT 令牌信息
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">访问令牌 (Access Token)</label>
+                        <textarea
+                            id="access-token"
+                            readonly
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-xs font-mono"
+                            rows="3"
+                        ></textarea>
+                        <button
+                            onclick="copyToClipboard('access-token')"
+                            class="mt-2 text-sm text-blue-500 hover:text-blue-700"
+                        >
+                            <i class="fa fa-copy"></i> 复制
+                        </button>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-700 mb-2">令牌解码内容：</h3>
+                        <pre id="token-decoded" class="bg-gray-50 p-3 rounded-lg text-xs overflow-x-auto"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据提交和查询区域 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fa fa-database"></i> 数据管理
+                </h2>
+
+                <!-- 提交数据表单 -->
+                <form onsubmit="handleSubmitData(event)" class="mb-6">
+                    <h3 class="text-lg font-medium mb-3 text-gray-700">提交新数据</h3>
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">标题</label>
+                        <input
+                            id="data-title"
+                            type="text"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            placeholder="请输入标题"
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">内容</label>
+                        <textarea
+                            id="data-content"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            rows="3"
+                            placeholder="请输入内容"
+                        ></textarea>
+                    </div>
+                    <button
+                        type="submit"
+                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                    >
+                        <i class="fa fa-plus"></i> 提交数据
+                    </button>
+                </form>
+
+                <!-- 查询数据按钮 -->
+                <button
+                    onclick="fetchUserData()"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200 mb-4"
+                >
+                    <i class="fa fa-refresh"></i> 刷新我的数据
+                </button>
+
+                <!-- 数据列表 -->
+                <div>
+                    <h3 class="text-lg font-medium mb-3 text-gray-700">我的数据</h3>
+                    <div id="data-list" class="space-y-3">
+                        <p class="text-gray-500 text-sm">暂无数据</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message" class="fixed top-4 right-4 max-w-sm hidden"></div>
+    </div>
+
+    <script>
+        // InsForge 配置
+        const INSFORGE_CONFIG = {
+            baseUrl: 'https://2t46q3eu.us-west.insforge.app',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4ODU0MTZ9.MmTpyJQoCsiILWhNRYEMMeVQG9btPKS6bbfDwB1u_1g'
+        };
+
+        // 当前用户会话
+        let currentUser = null;
+        let accessToken = null;
+
+        // 初始化应用
+        function initApp() {
+            // 检查 URL 中是否有来自认证回调的参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const access_token = urlParams.get('access_token');
+            const refresh_token = urlParams.get('refresh_token');
+
+            if (access_token) {
+                // 从认证回调中获取令牌
+                handleAuthCallback(access_token, refresh_token);
+                return;
+            }
+
+            // 从 localStorage 恢复会话
+            const savedToken = localStorage.getItem('insforge_access_token');
+            const savedUser = localStorage.getItem('insforge_user');
+
+            if (savedToken && savedUser) {
+                accessToken = savedToken;
+                currentUser = JSON.parse(savedUser);
+                showUserSection();
+            } else {
+                showAuthSection();
+            }
+        }
+
+        // 处理认证回调
+        async function handleAuthCallback(access_token, refresh_token) {
+            try {
+                // 清除 URL 中的参数
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                // 保存令牌
+                accessToken = access_token;
+                localStorage.setItem('insforge_access_token', accessToken);
+                if (refresh_token) {
+                    localStorage.setItem('insforge_refresh_token', refresh_token);
+                }
+
+                // 获取用户信息
+                await fetchUserInfo();
+
+                showMessage('登录成功！', 'success');
+                showUserSection();
+            } catch (error) {
+                console.error('处理认证回调失败:', error);
+                showMessage('登录失败，请重试', 'error');
+                showAuthSection();
+            }
+        }
+
+        // 显示登录模态框
+        function showLoginModal() {
+            const email = prompt('请输入邮箱：');
+            if (!email) return;
+
+            const password = prompt('请输入密码（至少6位）：');
+            if (!password) return;
+
+            handleEmailLogin(email, password);
+        }
+
+        // 处理邮箱登录
+        async function handleEmailLogin(email, password) {
+            try {
+                showMessage('正在登录...', 'info');
+                console.log('登录请求:', { email, baseUrl: INSFORGE_CONFIG.baseUrl });
+
+                // 使用 magic link 登录方式
+                const response = await fetch(`${INSFORGE_CONFIG.baseUrl}/auth/v1/magiclink`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': INSFORGE_CONFIG.anonKey
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                console.log('响应状态:', response.status);
+
+                const contentType = response.headers.get('content-type');
+                let responseData;
+
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                    console.log('响应数据:', responseData);
+                } else {
+                    const text = await response.text();
+                    console.log('响应文本:', text);
+                    responseData = { message: text };
+                }
+
+                if (response.ok) {
+                    showMessage('登录链接已发送到您的邮箱，请查收！', 'success');
+                } else {
+                    throw new Error(responseData.error_description || responseData.message || '登录失败');
+                }
+
+            } catch (error) {
+                console.error('登录错误:', error);
+                showMessage(error.message, 'error');
+            }
+        }
+
+        // 处理登录 - 显示登录选项
+        function handleLogin() {
+            const choice = confirm('点击"确定"使用邮箱登录\n点击"取消"使用 Google OAuth 登录');
+
+            if (choice) {
+                // 邮箱登录
+                showLoginModal();
+            } else {
+                // OAuth 登录
+                const redirectUrl = encodeURIComponent(window.location.href);
+                const loginUrl = `${INSFORGE_CONFIG.baseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUrl}`;
+                window.location.href = loginUrl;
+            }
+        }
+
+        // 获取用户信息
+        async function fetchUserInfo() {
+            if (!accessToken) {
+                throw new Error('无访问令牌');
+            }
+
+            const response = await fetch(`${INSFORGE_CONFIG.baseUrl}/auth/v1/user`, {
+                method: 'GET',
+                headers: {
+                    'apikey': INSFORGE_CONFIG.anonKey,
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('获取用户信息失败');
+            }
+
+            const data = await response.json();
+
+            currentUser = {
+                id: data.id,
+                email: data.email,
+                role: data.role || 'authenticated',
+                metadata: data.user_metadata || {}
+            };
+
+            localStorage.setItem('insforge_user', JSON.stringify(currentUser));
+
+            // 创建用户 profile（如果不存在）
+            await createUserProfile();
+
+            return currentUser;
+        }
+
+        // 处理用户退出
+        function handleLogout() {
+            // 清除本地存储
+            localStorage.removeItem('insforge_access_token');
+            localStorage.removeItem('insforge_refresh_token');
+            localStorage.removeItem('insforge_user');
+
+            // 清除会话
+            currentUser = null;
+            accessToken = null;
+
+            showMessage('已退出登录', 'info');
+            showAuthSection();
+        }
+
+        // 创建用户 Profile
+        async function createUserProfile() {
+            try {
+                const response = await fetch(`${INSFORGE_CONFIG.baseUrl}/rest/v1/profiles`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': INSFORGE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify([{
+                        user_id: currentUser.id,
+                        username: currentUser.email?.split('@')[0] || 'user',
+                        full_name: currentUser.metadata?.full_name || '',
+                        bio: ''
+                    }])
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    // 如果是重复错误（profile 已存在），忽略
+                    if (error.code !== '23505') {
+                        console.error('创建 profile 失败:', error);
+                    }
+                }
+            } catch (error) {
+                console.error('创建 profile 出错:', error);
+            }
+        }
+
+        // 提交用户数据
+        async function handleSubmitData(event) {
+            event.preventDefault();
+
+            if (!accessToken) {
+                showMessage('请先登录', 'error');
+                return;
+            }
+
+            const title = document.getElementById('data-title').value;
+            const content = document.getElementById('data-content').value;
+
+            try {
+                showMessage('正在提交数据...', 'info');
+
+                const response = await fetch(`${INSFORGE_CONFIG.baseUrl}/rest/v1/user_data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': INSFORGE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify([{
+                        user_id: currentUser.id,
+                        title: title,
+                        content: content
+                    }])
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || '提交数据失败');
+                }
+
+                // 清空表单
+                document.getElementById('data-title').value = '';
+                document.getElementById('data-content').value = '';
+
+                showMessage('数据提交成功！', 'success');
+
+                // 刷新数据列表
+                fetchUserData();
+
+            } catch (error) {
+                console.error('提交数据错误:', error);
+                showMessage(error.message || '提交数据失败', 'error');
+            }
+        }
+
+        // 获取用户数据
+        async function fetchUserData() {
+            if (!accessToken) {
+                showMessage('请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${INSFORGE_CONFIG.baseUrl}/rest/v1/user_data?user_id=eq.${currentUser.id}&order=created_at.desc`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'apikey': INSFORGE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('获取数据失败');
+                }
+
+                const data = await response.json();
+                displayUserData(data);
+
+            } catch (error) {
+                console.error('获取数据错误:', error);
+                showMessage(error.message, 'error');
+            }
+        }
+
+        // 显示用户数据
+        function displayUserData(data) {
+            const dataList = document.getElementById('data-list');
+
+            if (!data || data.length === 0) {
+                dataList.innerHTML = '<p class="text-gray-500 text-sm">暂无数据</p>';
+                return;
+            }
+
+            const html = data.map(item => `
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-800">${escapeHtml(item.title)}</h4>
+                    <p class="text-gray-600 text-sm mt-2">${escapeHtml(item.content)}</p>
+                    <p class="text-gray-400 text-xs mt-2">
+                        <i class="fa fa-clock-o"></i> ${new Date(item.created_at).toLocaleString('zh-CN')}
+                    </p>
+                </div>
+            `).join('');
+
+            dataList.innerHTML = html;
+        }
+
+        // 显示认证区域
+        function showAuthSection() {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('user-section').classList.add('hidden');
+        }
+
+        // 显示用户区域
+        function showUserSection() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('user-section').classList.remove('hidden');
+
+            // 显示用户信息
+            const userInfoHtml = `
+                <p><strong>用户 ID:</strong> ${currentUser.id || 'N/A'}</p>
+                <p><strong>邮箱:</strong> ${currentUser.email || 'N/A'}</p>
+                <p><strong>角色:</strong> ${currentUser.role || 'authenticated'}</p>
+            `;
+            document.getElementById('user-info').innerHTML = userInfoHtml;
+
+            // 显示访问令牌
+            document.getElementById('access-token').value = accessToken;
+
+            // 解码并显示令牌内容
+            const tokenDecoded = decodeJWT(accessToken);
+            document.getElementById('token-decoded').textContent = JSON.stringify(tokenDecoded, null, 2);
+
+            // 加载用户数据
+            fetchUserData();
+        }
+
+        // 解码 JWT
+        function decodeJWT(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return { error: '无法解码令牌' };
+            }
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(elementId) {
+            const textarea = document.getElementById(elementId);
+            textarea.select();
+            document.execCommand('copy');
+            showMessage('已复制到剪贴板', 'success');
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            const bgColors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+
+            messageDiv.className = `fixed top-4 right-4 max-w-sm ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-lg`;
+            messageDiv.textContent = message;
+            messageDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        // 初始化
+        initApp();
+    </script>
+</body>
+</html>

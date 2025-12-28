@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户认证系统 - InsForge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- 头部 -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fa fa-user-circle-o"></i> InsForge 用户认证系统
+            </h1>
+            <p class="text-gray-600 mt-2">使用 Magic Link 邮箱登录</p>
+        </header>
+
+        <!-- 未登录状态 -->
+        <div id="logged-out" class="max-w-md mx-auto">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 text-center">登录</h2>
+
+                <div class="space-y-4">
+                    <button
+                        onclick="goToAuthPage()"
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
+                    >
+                        <i class="fa fa-sign-in"></i> 前往登录页面
+                    </button>
+
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-white text-gray-500">或使用邮箱登录</span>
+                        </div>
+                    </div>
+
+                    <form onsubmit="sendMagicLink(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">邮箱地址</label>
+                            <input
+                                id="email"
+                                type="email"
+                                required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="your@email.com"
+                            >
+                        </div>
+                        <button
+                            type="submit"
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
+                        >
+                            <i class="fa fa-envelope"></i> 发送登录链接
+                        </button>
+                    </form>
+                </div>
+
+                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <p class="text-sm text-blue-800">
+                        <i class="fa fa-info-circle"></i> <strong>登录方式：</strong>
+                    </p>
+                    <ul class="text-sm text-blue-700 mt-2 list-disc list-inside space-y-1">
+                        <li><strong>方式1：</strong>点击"前往登录页面"使用 Google 或 GitHub 登录</li>
+                        <li><strong>方式2：</strong>输入邮箱，点击"发送登录链接"，查收邮件后点击链接登录</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 已登录状态 -->
+        <div id="logged-in" class="hidden">
+            <!-- 用户信息卡片 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fa fa-user"></i> 用户信息
+                </h2>
+                <div id="user-info" class="space-y-2"></div>
+                <button
+                    onclick="logout()"
+                    class="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                >
+                    <i class="fa fa-sign-out"></i> 退出登录
+                </button>
+            </div>
+
+            <!-- JWT 令牌 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fa fa-key"></i> JWT 令牌
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">访问令牌</label>
+                        <textarea
+                            id="access-token"
+                            readonly
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-xs font-mono"
+                            rows="4"
+                        ></textarea>
+                        <button
+                            onclick="copyToken()"
+                            class="mt-2 text-sm text-blue-500 hover:text-blue-700"
+                        >
+                            <i class="fa fa-copy"></i> 复制令牌
+                        </button>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-700 mb-2">解码内容：</h3>
+                        <pre id="token-decoded" class="bg-gray-50 p-3 rounded-lg text-xs overflow-x-auto"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据管理 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fa fa-database"></i> 数据管理
+                </h2>
+
+                <!-- 提交数据表单 -->
+                <form onsubmit="submitData(event)" class="mb-6">
+                    <h3 class="text-lg font-medium mb-3 text-gray-700">添加新数据</h3>
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">标题</label>
+                        <input
+                            id="data-title"
+                            type="text"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            placeholder="输入标题"
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">内容</label>
+                        <textarea
+                            id="data-content"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                            rows="3"
+                            placeholder="输入内容"
+                        ></textarea>
+                    </div>
+                    <button
+                        type="submit"
+                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                    >
+                        <i class="fa fa-plus"></i> 提交数据
+                    </button>
+                </form>
+
+                <button
+                    onclick="loadData()"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200 mb-4"
+                >
+                    <i class="fa fa-refresh"></i> 刷新数据
+                </button>
+
+                <div>
+                    <h3 class="text-lg font-medium mb-3 text-gray-700">我的数据</h3>
+                    <div id="data-list" class="space-y-3">
+                        <p class="text-gray-500 text-sm">暂无数据</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message" class="fixed top-4 right-4 max-w-sm hidden"></div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            baseUrl: 'https://2t46q3eu.us-west.insforge.app',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4ODU0MTZ9.MmTpyJQoCsiILWhNRYEMMeVQG9btPKS6bbfDwB1u_1g'
+        };
+
+        let accessToken = null;
+        let currentUser = null;
+
+        // 初始化
+        function init() {
+            // 检查 URL 中的 access_token
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('access_token');
+
+            if (token) {
+                // 清除 URL 参数
+                window.history.replaceState({}, '', window.location.pathname);
+                accessToken = token;
+                localStorage.setItem('access_token', token);
+                loadUser();
+            } else {
+                // 从 localStorage 恢复
+                accessToken = localStorage.getItem('access_token');
+                if (accessToken) {
+                    loadUser();
+                } else {
+                    showLoggedOut();
+                }
+            }
+        }
+
+        // 跳转到托管认证页面
+        function goToAuthPage() {
+            // 跳转到 InsForge 托管的登录页面
+            const redirectUrl = encodeURIComponent(window.location.href);
+            window.location.href = `${CONFIG.baseUrl}/auth?redirect_to=${redirectUrl}`;
+        }
+
+        // 发送 Magic Link（备用方案）
+        async function sendMagicLink(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+
+            try {
+                showMessage('正在发送登录链接...', 'info');
+
+                // 尝试使用 otp 发送
+                const response = await fetch(`${CONFIG.baseUrl}/auth/v1/otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': CONFIG.anonKey
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                if (response.ok) {
+                    showMessage('登录链接已发送到您的邮箱！', 'success');
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error_description || error.message || '发送失败');
+                }
+            } catch (error) {
+                console.error('发送 Magic Link 失败:', error);
+                showMessage(error.message, 'error');
+            }
+        }
+
+        // 加载用户信息
+        async function loadUser() {
+            try {
+                const response = await fetch(`${CONFIG.baseUrl}/auth/v1/user`, {
+                    headers: {
+                        'apikey': CONFIG.anonKey,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('获取用户信息失败');
+                }
+
+                const user = await response.json();
+                currentUser = user;
+                localStorage.setItem('user', JSON.stringify(user));
+                showLoggedIn();
+            } catch (error) {
+                console.error('加载用户失败:', error);
+                logout();
+            }
+        }
+
+        // 显示已登录状态
+        function showLoggedIn() {
+            document.getElementById('logged-out').classList.add('hidden');
+            document.getElementById('logged-in').classList.remove('hidden');
+
+            document.getElementById('user-info').innerHTML = `
+                <p><strong>ID:</strong> ${currentUser.id}</p>
+                <p><strong>邮箱:</strong> ${currentUser.email}</p>
+                <p><strong>角色:</strong> ${currentUser.role || 'authenticated'}</p>
+            `;
+
+            document.getElementById('access-token').value = accessToken;
+
+            // 解码 JWT
+            try {
+                const decoded = JSON.parse(atob(accessToken.split('.')[1]));
+                document.getElementById('token-decoded').textContent = JSON.stringify(decoded, null, 2);
+            } catch (e) {
+                document.getElementById('token-decoded').textContent = '无法解码';
+            }
+
+            loadData();
+        }
+
+        // 显示未登录状态
+        function showLoggedOut() {
+            document.getElementById('logged-out').classList.remove('hidden');
+            document.getElementById('logged-in').classList.add('hidden');
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            accessToken = null;
+            currentUser = null;
+            showLoggedOut();
+            showMessage('已退出登录', 'info');
+        }
+
+        // 提交数据
+        async function submitData(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('data-title').value;
+            const content = document.getElementById('data-content').value;
+
+            try {
+                showMessage('正在提交...', 'info');
+
+                const response = await fetch(`${CONFIG.baseUrl}/rest/v1/user_data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': CONFIG.anonKey,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify([{
+                        user_id: currentUser.id,
+                        title,
+                        content
+                    }])
+                });
+
+                if (!response.ok) {
+                    throw new Error('提交失败');
+                }
+
+                document.getElementById('data-title').value = '';
+                document.getElementById('data-content').value = '';
+
+                showMessage('提交成功！', 'success');
+                loadData();
+            } catch (error) {
+                console.error('提交失败:', error);
+                showMessage('提交失败', 'error');
+            }
+        }
+
+        // 加载数据
+        async function loadData() {
+            try {
+                const response = await fetch(
+                    `${CONFIG.baseUrl}/rest/v1/user_data?user_id=eq.${currentUser.id}&order=created_at.desc`,
+                    {
+                        headers: {
+                            'apikey': CONFIG.anonKey,
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                const data = await response.json();
+
+                const list = document.getElementById('data-list');
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm">暂无数据</p>';
+                } else {
+                    list.innerHTML = data.map(item => `
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <h4 class="font-semibold">${escapeHtml(item.title)}</h4>
+                            <p class="text-sm text-gray-600 mt-2">${escapeHtml(item.content)}</p>
+                            <p class="text-xs text-gray-400 mt-2">
+                                <i class="fa fa-clock-o"></i> ${new Date(item.created_at).toLocaleString('zh-CN')}
+                            </p>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载数据失败:', error);
+            }
+        }
+
+        // 复制令牌
+        function copyToken() {
+            const textarea = document.getElementById('access-token');
+            textarea.select();
+            document.execCommand('copy');
+            showMessage('已复制到剪贴板', 'success');
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 显示消息
+        function showMessage(text, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+
+            const msg = document.getElementById('message');
+            msg.className = `fixed top-4 right-4 max-w-sm ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg`;
+            msg.textContent = text;
+            msg.classList.remove('hidden');
+
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+        }
+
+        // 启动应用
+        init();
+    </script>
+</body>
+</html>
